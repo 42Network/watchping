@@ -78,8 +78,8 @@
 # --- Setup Vars and Subs ---
 #
 ping=/bin/ping		# Location of ping
-timeout=5			# Default ping timeout, secs
-retries=2           # Number of ping retries
+timeout=2			# Default ping timeout, secs
+retries=1           # Number of ping retries
 PATH=/bin:$PATH
 verbose=0			# setup defaults
 addr="root"
@@ -108,7 +108,7 @@ usage() {
 # logtext - append the input text to the file in $logfile.
 #
 logtext() {
-	echo "-----\n$*" >> $logfile
+	echo -e "-----\n$*" >> $logfile
 }
 
 # webtext - process the input text into a website and save to $website file.
@@ -122,9 +122,9 @@ webtext() {
 			  print "</HEAD><BODY BGCOLOR=\"#FFFFFF\">"
 			  print "<H1>WatchPing Report, " $0 "</H1><HR><H2>"
 		}
-		NR > 1 { if ($0 ~ /no answer/) {
+		NR > 1 { if ($0 ~ /100% packet loss/) {
 			    print "<FONT COLOR=\"#FF0000\">" $0 "</FONT><BR>"
-			 } else if ($0 ~ /unknown host/) {
+			 } else if ($0 ~ /bad address/) {
 			    print "<FONT COLOR=\"#0000AA\">" $0 "</FONT><BR>"
 			 } else {
 			    print "<FONT COLOR=\"#00AA00\">" $0 "</FONT><BR>"
@@ -263,19 +263,31 @@ do
 	#
 	for host in $hosts
 	do
-		output="`$ping -c $retries -w $timeout $host 2>&1 | tr '\n' ' '`"
+		output=$($ping -q -c $retries -W $timeout $host 2>&1)
 		if [ $? -ne 0 ]; then
 			error=1
 			dead="$dead $host"
 		fi
+#		[ $verbose -eq 1 ] && echo "$output"
+		output2=$(echo "$output" | awk '
+		   /PING/        { gsub("[():]",""); hostname=$2;ip=$3 } 
+		   /packet/      { loss=$7 } 
+		   /round-trip/  { split($4,t,"/"); time=t[3] } 
+		   /bad address/ { gsub("\047",""); bad=$4 } 
+		   END { if (bad)         { printf("%s unknown hostname\n",bad) } 
+				 else if (time)   { printf("%s [%s] is up (time = %s ms)\n", hostname,ip,time) } 
+				 else             { printf("%s [%s] is down\n", hostname,ip) }
+			   }
+		')
+		
 		text="${text}
-${output}"
+ ${output2}"
 	done
 
 	#
 	#  Process Actions 
 	#
-	[ $verbose -eq 1 ] && echo "-----\n$text"
+	[ $verbose -eq 1 ] && echo -e "-----\n$text"
 	[ "$logfile" != "" ] && logtext "$text"
 	[ "$website" != "" ] && webtext "$text"
 
