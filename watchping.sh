@@ -71,13 +71,15 @@
 #
 # 03-Jun-2003	Brendan Gregg	Created this.
 # 25-Jun-2003	Brendan Gregg	Added event based code.
+# 12-Jan-2014   Nathan Ellsworth	Modified to work with Linux
 
 
 #
 # --- Setup Vars and Subs ---
 #
-ping=/usr/sbin/ping		# Location of ping
+ping=/bin/ping		# Location of ping
 timeout=5			# Default ping timeout, secs
+retries=2           # Number of ping retries
 PATH=/bin:$PATH
 verbose=0			# setup defaults
 addr="root"
@@ -158,16 +160,6 @@ emailsend() {
 syslogsend() {
 	logger -twatchping -p$syslog Hosts Down: $dead
 }
-
-if [ ! -x $ping ]		# Check ping works, or try a different path.
-then
-	ping=/bin/ping
-	if [ ! -x $ping ]; then
-		echo >&2 "ERROR2: Can't find ping. Please place in \$PATH."
-		exit 1
-	fi
-fi
-
 
 #
 # --- Parse Options ---
@@ -271,7 +263,7 @@ do
 	#
 	for host in $hosts
 	do
-		output="`$ping $host $timeout 2>&1`"
+		output="`$ping -c $retries -w $timeout $host 2>&1 | tr '\n' ' '`"
 		if [ $? -ne 0 ]; then
 			error=1
 			dead="$dead $host"
