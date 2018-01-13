@@ -122,9 +122,9 @@ webtext() {
 			  print "</HEAD><BODY BGCOLOR=\"#FFFFFF\">"
 			  print "<H1>WatchPing Report, " $0 "</H1><HR><H2>"
 		}
-		NR > 1 { if ($0 ~ /100% packet loss/) {
+		NR > 1 { if ($0 ~ /is down/) {
 			    print "<FONT COLOR=\"#FF0000\">" $0 "</FONT><BR>"
-			 } else if ($0 ~ /bad address/) {
+			 } else if ($0 ~ /unknown hostname/) {
 			    print "<FONT COLOR=\"#0000AA\">" $0 "</FONT><BR>"
 			 } else {
 			    print "<FONT COLOR=\"#00AA00\">" $0 "</FONT><BR>"
